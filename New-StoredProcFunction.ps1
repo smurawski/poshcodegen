@@ -15,6 +15,14 @@
 # Example: ./New-StoredProcFunction.ps1 'Data Source=MySqlServer;Database=Northwind;User=AnythingButSa;Password=abc123' sp_createnewcustomer
 # Example 'sp_createnewcustomer | ./New-StoredProcFunction.ps1 'Data Source=MySqlServer;Database=Northwind;User=AnythingButSa;Password=abc123'
 
+# modifications by Bernd Kriszio (bk)
+# http://pauerschell.blogspot.com/
+# new features:
+# Output of Print-Statements captured and output via Write-Host (ToDo ? return it via the return object)
+# ReturnValue treated as pseudo output parameter
+# requires SQL-Server 2005 and better (ToDo reduce this to SQL-Server 2000(bk))
+
+
 param($ConnectionString= 'Data Source=204.75.136.26; Initial Catalog=JustWare; User=sa; Password=newjersey;'
 	, [String[]]$StoredProc= $null)
 	
@@ -24,7 +32,7 @@ begin
 	#to provide better pipeline support
 	if ($StoredProc.count -gt 0)
 	{
-		$StoredProc | c:\scripts\powershell\new-storedprocfunction.ps1 $ConnectionString
+		$StoredProc | & $MyInvocation.MyCommand.Path $ConnectionString
 	}
 	
 	#-------------------------------------------------------------------
@@ -46,10 +54,12 @@ begin
 	function Get-FunctionParameter()
 	{
 		param($FunctionName, $ConnectionString)
+        # the following query requires SQL-Server 2005 and better
 		$query = @"
 SELECT parameter_Name, data_type, character_maximum_length, parameter_mode
 FROM INFORMATION_SCHEMA.Parameters
 WHERE specific_NAME LIKE '$FunctionName'
+ORDER BY ORDINAL_POSITION
 "@
 		$Rows = Invoke-SQLQuery $ConnectionString $Query 
 		
@@ -106,6 +116,16 @@ WHERE specific_NAME LIKE '$FunctionName'
 		$script:OutputParametersReturn += '$CommandOutput | Add-Member -Name {1} -Value $command.Parameters["{0}"].Value -MemberType NoteProperty' -f $Parameter.FullName, $Parameter.ShortName
 		$script:OutputParametersReturn += "`n"
 	}
+
+	function ProcessReturnValue()
+	{
+		$script:OutputParameters += '$command.Parameters.Add("@ReturnValue", [Data.SqlDBType]::int)  | out-null ' 	
+		$script:OutputParameters += "`n"
+		$script:OutputParameters += '$command.Parameters["@ReturnValue"].Direction = [System.Data.ParameterDirection]::ReturnValue '
+		$script:OutputParameters += "`n"
+		$script:OutputParametersReturn += '$CommandOutput | Add-Member -Name ReturnValue -Value $command.Parameters["@ReturnValue"].Value -MemberType NoteProperty' 
+		$script:OutputParametersReturn += "`n"
+	}
 	function ProcessParameters()
 	{
 		param ([psobject[]]$Parameters)
@@ -121,6 +141,7 @@ WHERE specific_NAME LIKE '$FunctionName'
 				ProcessInputParameter $Parameter
 			}
 		}
+        ProcessReturnValue
 	}
 	function StandardCode()
 	{
@@ -128,10 +149,14 @@ WHERE specific_NAME LIKE '$FunctionName'
 
 		$CreateStoredProc = @'
 $connection = New-Object System.Data.SqlClient.SqlConnection('{0}')
+$handler = [System.Data.SqlClient.SqlInfoMessageEventHandler] {2}
+$connection.add_InfoMessage($handler)
 $command = New-Object System.Data.SqlClient.SqlCommand('{1}', $connection)
 $command.CommandType = [System.Data.CommandType]::StoredProcedure
 '@
-		$script:CreateStoredProcCode = $CreateStoredProc -f $ConnectionString, $FunctionName
+        # bernd_k: work around, move verbatim curly braces into some expression 
+        $code = '{Write-Host "$($_)" }'
+		$script:CreateStoredProcCode = $CreateStoredProc -f $ConnectionString, $FunctionName, $code
 		
 	}
 	function CreateFunctionParameterStatement()
@@ -203,7 +228,7 @@ $OutputParametersReturn
 #Close the connection and return the output object	
 $Return
 "@
-		
+		Write-Host $FunctionText
 		Set-Item -Path function:global:$FunctionName -Value $FunctionText
 		Write-Verbose "Created function - $FunctionName"
 	}
