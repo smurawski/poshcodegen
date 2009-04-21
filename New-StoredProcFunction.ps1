@@ -67,7 +67,7 @@ ORDER BY ORDINAL_POSITION
 		$Rows = Invoke-SQLQuery $ConnectionString $Query 
 		
 		$Parameters = @()
-        if ($row -ne $null)
+        if ($rows -ne $null)
         {
     		foreach ($Row in $Rows)
     		{
