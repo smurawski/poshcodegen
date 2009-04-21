@@ -22,6 +22,9 @@
 # ReturnValue treated as pseudo output parameter
 # requires SQL-Server 2005 and better (ToDo reduce this to SQL-Server 2000(bk))
 
+# Thanks to Doug Finke and karl Prosser http://dougfinke.com/blog/index.php/2009/04/20/powershell-by-design-bug/
+# your post saved me lost of hours
+
 
 param($ConnectionString= 'Data Source=204.75.136.26; Initial Catalog=JustWare; User=sa; Password=newjersey;'
 	, [String[]]$StoredProc= $null)
@@ -64,17 +67,20 @@ ORDER BY ORDINAL_POSITION
 		$Rows = Invoke-SQLQuery $ConnectionString $Query 
 		
 		$Parameters = @()
-		foreach ($Row in $Rows)
-		{
-			$Parameter =  New-Object PSObject  
-			$Parameter | Add-Member -Name FullName -Value $row.parameter_Name -MemberType NoteProperty
-			$Parameter | Add-Member -Name ShortName -Value $($row.parameter_Name -replace '@') -MemberType NoteProperty
-			$Parameter | Add-Member -Name DataType -Value $Row.data_type -MemberType NoteProperty
-			$Parameter | Add-Member -Name Length -Value $Row.character_maximum_length -MemberType NoteProperty
-			$Parameter | Add-Member -Name IsOutput -Value $(if ($Row.parameter_mode -eq 'INOUT'){$true} else {$false}) -MemberType NoteProperty
+        if ($row -ne $null)
+        {
+    		foreach ($Row in $Rows)
+    		{
+    			$Parameter =  New-Object PSObject  
+    			$Parameter | Add-Member -Name FullName -Value $row.parameter_Name -MemberType NoteProperty
+    			$Parameter | Add-Member -Name ShortName -Value $($row.parameter_Name -replace '@') -MemberType NoteProperty
+    			$Parameter | Add-Member -Name DataType -Value $Row.data_type -MemberType NoteProperty
+    			$Parameter | Add-Member -Name Length -Value $Row.character_maximum_length -MemberType NoteProperty
+    			$Parameter | Add-Member -Name IsOutput -Value $(if ($Row.parameter_mode -eq 'INOUT'){$true} else {$false}) -MemberType NoteProperty
 
-			$Parameters += $Parameter
-		}
+    			$Parameters += $Parameter
+    		}
+        }
 		return $Parameters
 	}
 	function ProcessAllParameter()
@@ -130,17 +136,20 @@ ORDER BY ORDINAL_POSITION
 	{
 		param ([psobject[]]$Parameters)
 		
-		foreach ($Parameter in $Parameters)
-		{
-			if ($Parameter.IsOutput)
-			{
-				ProcessOutputParameter $Parameter
-			}
-			else 
-			{
-				ProcessInputParameter $Parameter
-			}
-		}
+        if ($Parameters -ne $null)
+        {
+    		foreach ($Parameter in $Parameters)
+    		{
+    			if ($Parameter.IsOutput)
+    			{
+    				ProcessOutputParameter $Parameter
+    			}
+    			else 
+    			{
+    				ProcessInputParameter $Parameter
+    			}
+    		}
+        }
         ProcessReturnValue
 	}
 	function StandardCode()
