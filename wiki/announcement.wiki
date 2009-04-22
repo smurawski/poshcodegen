@@ -1,11 +1,11 @@
 #summary One-sentence summary of this page.
 what to expect in the next weeks
 = Introduction =
-* Oracle using Oracle.DataAccess
-* Oracle using System.Data.OracleClient
-* Redesign into a PowerShell Module
-* many optional parameters
-* database sessions
+  * Oracle using Oracle.DataAccess
+  * Oracle using System.Data.OracleClient
+  * Redesign into a PowerShell Module
+  * many optional parameters
+  * database sessions
 
 
 = Details =
