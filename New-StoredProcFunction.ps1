@@ -25,18 +25,18 @@
 # Thanks to Doug Finke and karl Prosser http://dougfinke.com/blog/index.php/2009/04/20/powershell-by-design-bug/
 # your post saved me lost of hours
 
-
-param($ConnectionString= 'Data Source=204.75.136.26; Initial Catalog=JustWare; User=sa; Password=newjersey;'
-	, [String[]]$StoredProc= $null)
+[cmdletbinding()]
+param(
+    [Parameter(Position = 0 ,Mandatory=$True, ValueFromPipeline=$false)]
+    $ConnectionString= $null,
+    [Parameter(Position = 1, Mandatory=$true, ValueFromPipeline=$True, ValueFromRemainingArguments=$true)]
+	[String[]]$StoredProc= $null
+    )
 	
 begin
 {
 	#Push stored proc names supplied as a parameter through the pipeline
 	#to provide better pipeline support
-	if ($StoredProc.count -gt 0)
-	{
-		$StoredProc | & $MyInvocation.MyCommand.Path $ConnectionString
-	}
 	
 	#-------------------------------------------------------------------
 	#Utility Functions
@@ -183,9 +183,14 @@ $command.CommandType = [System.Data.CommandType]::StoredProcedure
 }
 PROCESS
 {
-	if ($_ -ne $null)
+	if ($StoredProc.count -gt 1)
 	{
-		$FunctionName = $_
+		$StoredProc | & $MyInvocation.MyCommand.Path $ConnectionString
+	}
+    else
+	#if ($_ -ne $null)
+	{
+		$FunctionName = $StoredProc 
 		$InputParameterList = @()
 		$InputParameters = ""
 		$OutputParameters = ""
@@ -237,7 +242,7 @@ $OutputParametersReturn
 #Close the connection and return the output object	
 $Return
 "@
-		Write-Host $FunctionText
+		Write-Verbose $FunctionText
 		Set-Item -Path function:global:$FunctionName -Value $FunctionText
 		Write-Verbose "Created function - $FunctionName"
 	}
