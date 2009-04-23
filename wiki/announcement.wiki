@@ -11,7 +11,7 @@ what to expect in the next weeks
 = Details =
 
   * Adaption to Oracle using Oracle.DataAccess
-  Baics are ready, todo extracting parameter types and catching server output. 
+  Baics are ready, including extracting parameter types. Todo catching server output. 
 
   * Adaption to Oracle using System.Data.OracleClient
   Perhaps, I don't use this myself.
