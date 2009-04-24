@@ -1,20 +1,34 @@
 # Bernd kriszio  http://pauerschell.blogspot.com/  2009-04-23
 # Start of Oracle adaption
 
-# use something like this
-# $connet_string =  'Data Source=your_tns;User Id=scott;Password=tiger;Integrated Security=no' 
+# to hide your true accounts and passwords put something like this in your profile, and the scripts can run unmodified
+# $oracle_connet_string =  'Data Source=your_tns;User Id=scott;Password=tiger;Integrated Security=no' 
 
   
-#  Get-FunctionParameter procname
 # -------------------------------------------------------------------------------------------
 
 # Invoke-OraQuery "select 1 from dual"
+# Invoke-OraQuery "select  from dual"
+# Invoke-OraQuery "select OBJECT_NAME from user_objects where OBJECT_TYPE = 'PROCEDURE' ORDER BY 1"
+
+# --- find the name of a stored procedure
+# Invoke-OraQuery "select OBJECT_NAME from user_objects where OBJECT_TYPE = 'PROCEDURE' AND ROWNUM = 1"
+
+<#
+# --- and now find its parameters
+$proc_name = (Invoke-OraQuery "select OBJECT_NAME from user_objects where OBJECT_TYPE = 'PROCEDURE' AND ROWNUM = 1").Object_name
+Get-FunctionParameter $proc_Name
+#>
 
 
-# this doesn't work for me
-#[System.Reflection.Assembly]::LoadWithPartialName("Oracle.DataAccess")
+# generating an error
+# Invoke-OraQuery "select 1 / 0 from DUAL"
+
+
 # this works for me
-[Reflection.Assembly]::LoadFile("C:\oracle\product\10.2.0\client_1\ODP.NET\bin\1.x\Oracle.DataAccess.dll")
+
+[System.Reflection.Assembly]::LoadWithPartialName("Oracle.DataAccess")
+[System.Reflection.Assembly]::LoadWithPartialName("System.Data.OracleClient")
 
 function Invoke-OraQuery()
 {
@@ -23,7 +37,7 @@ function Invoke-OraQuery()
         [Parameter(Position=1, Mandatory=$false, ValueFromPipeline=$false)]        
     $Query,
         [Parameter(Position=2,  Mandatory=$false, ValueFromPipeline=$false)]        
-    $ConnectionString = $connet_string
+    $ConnectionString = $oracle_connet_string
 
     )
 	$connection = New-Object System.Data.OracleClient.OracleConnection $connectionString
@@ -49,7 +63,7 @@ function Get-FunctionParameter()
         [Parameter(Position=1, Mandatory=$True, ValueFromPipeline=$false)]        
         $FunctionName, 
         [Parameter(Position=2,  Mandatory=$false, ValueFromPipeline=$false)]        
-        $ConnectionString = $connet_string
+        $ConnectionString = $oracle_connet_string
     )
     # the following query requires SQL-Server 2005 and better
 	$query = @"
