@@ -23,7 +23,7 @@ exec noparm_recordset(:r)
 print r
  
 ------------- Test 2: noparm_print, no Parameters, result via Print -----------------------
-create or replace procedure noparm_recordset 
+create or replace procedure noparm_print 
 as
     v_product varchar2(255);
 begin
@@ -32,7 +32,7 @@ begin
 end;
 /
 
-exec noparm_recordset
+exec noparm_print
 
 ------------- Test 3: noparm_retval, no Parameters, result via returnvalue -----------------------
 
