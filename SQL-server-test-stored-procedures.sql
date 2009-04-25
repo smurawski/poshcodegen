@@ -14,7 +14,7 @@ create procedure dbo.noparm_recordset  as
 	select @@version SQL_Version
 go
 
-------------- Test 2: noparm_recordset, no Parameters, result via Print -----------------------
+------------- Test 2: noparm_print, no Parameters, result via Print -----------------------
 if OBJECT_ID('noparm_print') > 0
 	drop procedure noparm_print
 go
@@ -23,7 +23,7 @@ create procedure dbo.noparm_print  as
 	print @@version 
 go
 
-------------- Test 3: noparm_recordset, no Parameters, result via returnvalue -----------------------
+------------- Test 3: noparm_retval, no Parameters, result via returnvalue -----------------------
 if OBJECT_ID('noparm_retval') > 0
 	drop procedure noparm_retval
 go
@@ -61,8 +61,8 @@ exec noinparm_outparm @rc out
 select 'The version  is' = @rc
 
 
-------------- Test 5a: 1 in parm set, result as recordset -----------------------
-------------- Test 5b: 1 in parm null, result as recordset -----------------------
+------------- Test 5a: echodate 1 in parm set, result as recordset -----------------------
+------------- Test 5b: echodate 1 in parm null, result as recordset -----------------------
 
 if OBJECT_ID('echodate') > 0
 	drop procedure echodate
