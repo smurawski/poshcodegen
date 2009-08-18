@@ -115,6 +115,7 @@ function New-Connection ($connectionString)
     $handler = [System.Data.SqlClient.SqlInfoMessageEventHandler] {Write-Host "$($_)" }
     $connection.add_InfoMessage($handler)
     $global:command = $null
+    $connection.Open()  | out-null
 
 }
 
@@ -159,7 +160,9 @@ ORDER BY ORDINAL_POSITION
             '@' + $_.COLUMN_Name
         }elseif ($defaults.keys -contains $_.COLUMN_Name){
              $defaults[$_.COLUMN_Name]
-        } # -- todo else null or if not nullable 0, '', ' '
+        }else{ # -- todo else null or if not nullable 0, '', ' '
+            'null'
+        }
     }) -join ", "
     
     $SetParameter = ($columns |% { "`$command.Parameters['@$($_)'].Value = `$$($_)" }) -join "`r`n"
@@ -172,6 +175,9 @@ ORDER BY ORDINAL_POSITION
             # -- todo further types ----
             if ($type -eq 'varchar') {
                 $type = 'String'
+            }elseif (('bit', 'smallint') -contains $type)
+            {
+                $type = 'int'
             }
             "`$command.Parameters.Add('@$col', [Data.SqlDBType]::$Type)  | out-null " 
         }
@@ -195,13 +201,13 @@ if (! `$commands['$functionName'])
 
     $AddParameter 
 
-    `$connection.Open()  | out-null
-    `$commands['I-CMTUntersuchungstyp'] = `$command
+    #`$connection.Open()  | out-null
+    `$commands['$functionName'] = `$command
 }
 else
 {
     # Write-Host 'Reusing...'
-    `$command = `$commands['I-CMTUntersuchungstyp']
+    `$command = `$commands['$functionName']
 }
 
 
