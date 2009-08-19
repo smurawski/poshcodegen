@@ -109,6 +109,16 @@ function Invoke-SQLQuery()
     }
 }
 
+function Do-Null($parameter)
+{
+    if ($parameter -eq 'null')
+    {
+        [DBNull]::Value 
+    } else {
+        $parameter
+    }
+}
+
 function New-Connection ($connectionString)
 {
     $global:connection = New-Object System.Data.SqlClient.SqlConnection($connectionString)
@@ -117,16 +127,17 @@ function New-Connection ($connectionString)
     $global:command = $null
     $connection.Open()  | out-null
 
+    $global:commands = @{}
+
 }
 
 
 function Close-Connection
 {
     $global:connection.Close() | out-null
-    $global:command = $null
+    Remove-Item variable:global:commands 
 }
 
-$global:commands = @{}
 
 function New-InsertStatement
 {
@@ -151,11 +162,11 @@ ORDER BY ORDINAL_POSITION
     
     $functionName = "I-" + $table_name
     
-    $parms = ($columns  | % {"`$$($_)" } ) -join ", `r`n           "
+    $parms = ($columns  | ForEach-Object {"`$$($_)" } ) -join ", `r`n           "
     
-    $columnList = ($rows |% {$_.COLUMN_Name}) -join ", "
+    $columnList = ($rows |? {!$_.has_identity}| ForEach-Object {$_.COLUMN_Name}) -join ", "
     
-    $ValueList =  ($rows |% {
+    $ValueList =  ($rows |? {!$_.has_identity}|ForEach-Object {
         if ($columns -contains $_.COLUMN_Name ) {
             '@' + $_.COLUMN_Name
         }elseif ($defaults.keys -contains $_.COLUMN_Name){
@@ -165,9 +176,9 @@ ORDER BY ORDINAL_POSITION
         }
     }) -join ", "
     
-    $SetParameter = ($columns |% { "`$command.Parameters['@$($_)'].Value = `$$($_)" }) -join "`r`n"
+    $SetParameter = ($columns |ForEach-Object { "`$command.Parameters['@$($_)'].Value = (Do-Null `$$($_))" }) -join "`r`n"
     
-    $AddParameter = ($rows |%{ 
+    $AddParameter = ($rows |ForEach-Object{ 
         $col = $_.COLUMN_Name
         $type = $_.DATA_TYPE
         if ($columns -contains $col)
