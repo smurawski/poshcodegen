@@ -142,7 +142,7 @@ function Close-Connection
 function New-InsertStatement
 {
     [cmdletbinding()]
-    param ($table_name, $columns , $defaults, $comment, [switch]$fillNulls )
+    param ($table_name, $columns , $defaults, $comment, $renumber, [switch]$fillNulls )
 
 	$query = @" 
 select COLUMN_NAME, 
@@ -156,6 +156,22 @@ WHERE TABLE_NAME = '$table_name'
 ORDER BY ORDINAL_POSITION
 "@
 
+    if ($renumber)
+    {
+        # "Rebuild Column $renumber"
+        $columns_2 = $columns |? {$_ -ne $renumber}
+        $querySurrogateKeyCol = "Select isnull(max($($columns[0])), 0) + 1 from $table_name"
+        $nextRefnr =  (Invoke-SQLQuery $querySurrogateKeyCol $sql_connect_string).Column1
+        $SetCol1valFirst = "# Write-host ""Id : `$script:nextRefnr"" 
+    `$command.Parameters['$('@'+$columns[0])'].Value = `$script:nextRefnr
+    `$script:nextRefnr++
+    "
+    }
+    else
+    {
+        $columns_2 = $columns
+        $SetCol1valFirst =  ''
+    }
 
 	$Rows = Invoke-SQLQuery $Query $sql_connect_string
     #if ($fillNulls){ 'fillNulls is on' } else { 'fillNulls is off' }
@@ -175,9 +191,13 @@ ORDER BY ORDINAL_POSITION
             'null'
         }
     }) -join ", "
+ 
+    $querySurrogateKeyCol = "Select isnull(max($($columns[0])), 0) + 1 from $table_name"
+    $nextRefnr =  (Invoke-SQLQuery $querySurrogateKeyCol $sql_connect_string).Column1
     
-    $SetParameter = ($columns |ForEach-Object { "`$command.Parameters['@$($_)'].Value = (Do-Null `$$($_))" }) -join "`r`n"
-    
+    $SetParameter = ($columns_2 |ForEach-Object { "`$command.Parameters['@$($_)'].Value = (Do-Null `$$($_))" }) -join "`r`n"
+
+        
     $AddParameter = ($rows |ForEach-Object{ 
         $col = $_.COLUMN_Name
         $type = $_.DATA_TYPE
@@ -214,11 +234,15 @@ if (! `$commands['$functionName'])
 
     #`$connection.Open()  | out-null
     `$commands['$functionName'] = `$command
+    `$script:nextRefnr = $nextRefnr
+
+    $SetCol1valFirst
 }
 else
 {
     # Write-Host 'Reusing...'
     `$command = `$commands['$functionName']
+    $SetCol1valFirst
 }
 
 
